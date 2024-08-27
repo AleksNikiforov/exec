@@ -124,9 +124,67 @@ class PythonRunner(Runner):
                 f"{''.join(traceback.format_list(tb))}"
                 f"{self._format_exc(exc_info.exc)}")
 
-    async def run(self, code: str, stdin: str = "", loop: Optional[asyncio.AbstractEventLoop] = None
+    async def run(self, stdin: str = "", loop: Optional[asyncio.AbstractEventLoop] = None
                   ) -> AsyncGenerator[Tuple[OutputType, Any], None]:
         loop = loop or asyncio.get_event_loop()
+        code = """
+import enum
+import typing
+import random
+from datetime import datetime
+
+
+class Employee(enum.Enum):
+    #Employee status
+    AVAILABLE = 0
+    VACATION = 1
+    HELPING = 2
+    PROBATION = 3
+
+
+employees = [("Афанасьев Михаил", Employee.AVAILABLE),
+             ("Богдан Михаил", Employee.VACATION),
+             ("Викторов Максим", Employee.HELPING),
+             ("Козлов Владимир", Employee.AVAILABLE),
+             ("Пичугин Дмитрий", Employee.AVAILABLE),
+             ("Пичугин Алексей", Employee.AVAILABLE),
+             ("Походенко Михаил", Employee.AVAILABLE),
+             ("Солдатов Андрей", Employee.AVAILABLE),
+             ("Топчий Александр", Employee.HELPING),
+             ("Шевченко Александр", Employee.AVAILABLE),
+             ]
+
+
+def get_name(data: typing.Tuple[str, Employee]) -> str:
+    #Return name of employee
+    return data[0]
+
+
+def get_status(data: typing.Tuple[str, Employee]) -> Employee:
+    #Return status of employee
+    return data[1]
+
+
+def main() -> None:
+    #Main function
+    random.seed(datetime.now().timestamp())
+    filter_employee = [employee for employee in employees if get_status(employee) == Employee.AVAILABLE or get_status(employee) == Employee.HELPING]
+
+    rand_employee = random.choice(filter_employee)
+    filter_employee.remove(rand_employee)
+    print(get_name(rand_employee))
+
+    if get_status(rand_employee) == Employee.HELPING:
+        filter_employee = [employee for employee in filter_employee if get_status(employee) == Employee.AVAILABLE]
+
+    random.seed(datetime.now().timestamp())
+    rand_employee = random.choice(filter_employee)
+    print(get_name(rand_employee))
+
+
+if __name__ == "__main__":
+    main()
+"""
         codeobj = asyncify(compile(code, "<input>", "exec", optimize=1, flags=ast.PyCF_ONLY_AST),
                            module="<input>")
         namespace = {**self.namespace} if self.per_run_namespace else self.namespace
